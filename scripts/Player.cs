@@ -3,20 +3,30 @@ using System;
 
 public partial class Player : Area2D
 {
+    [Signal]
+    public delegate void HitEventHandler();
+
     [Export]
     public int Speed { get; set; } = 400;
     public Vector2 ScreenSize;
-	
-    // Called when the node enters the scene tree for the first time.
-	public override void _Ready()
-	{
-        ScreenSize = GetViewportRect().Size;
-        Hide();
-	}
 
-	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
-	{
+    // Called when the node enters the scene tree for the first time.
+    public override void _Ready()
+    {
+        ScreenSize = GetViewportRect().Size;
+        Hide(); // Player is only shown when user clicks ready
+    }
+
+    public void Start(Vector2 position)
+    {
+        Position = position;
+        Show();
+        GetNode<CollisionShape2D>("CollisionShape2D").Disabled = false;
+    }
+
+    // Called every frame. 'delta' is the elapsed time since the previous frame.
+    public override void _Process(double delta)
+    {
         var velocity = Vector2.Zero; // player's movement vector
 
         if (Input.IsActionPressed("MoveUp"))
@@ -57,7 +67,7 @@ public partial class Player : Area2D
             x: Mathf.Clamp(Position.X, 0, ScreenSize.X),
             y: Mathf.Clamp(Position.Y, 0, ScreenSize.Y)
         );
-       if (velocity.X != 0)
+        if (velocity.X != 0)
         {
             animatedSprite2D.Animation = "Walk";
             animatedSprite2D.FlipV = false;
@@ -67,6 +77,13 @@ public partial class Player : Area2D
         {
             animatedSprite2D.Animation = "Up";
             animatedSprite2D.FlipV = velocity.Y > 0;
-        } 
-	}
+        }
+    }
+
+    private void OnBodyEntered(Node2D body)
+    {
+        Hide(); // Hide player after being hit
+        EmitSignal(SignalName.Hit);
+        GetNode<CollisionShape2D>("CollisionShape2D").SetDeferred(CollisionShape2D.PropertyName.Disabled, true); // Disable the physics for player after current physics calculation is done.
+    }
 }
